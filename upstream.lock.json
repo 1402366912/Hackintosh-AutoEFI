@@ -1,0 +1,21 @@
+{
+  "Hardware-Sniffer": {
+    "repository": "https://github.com/lzhoang2801/Hardware-Sniffer",
+    "commit": "403cc25bc14be65c45a1e0ea9cfd3567103e9a73",
+    "license": "BSD-3-Clause",
+    "local_changes": []
+  },
+  "OpCore-Simplify": {
+    "repository": "https://github.com/lzhoang2801/OpCore-Simplify",
+    "commit": "f0e1e441bb455c33e9695a9c9c50e8ca931d4de8",
+    "included_files": ["Scripts/report_validator.py", "Scripts/utils.py", "LICENSE"],
+    "license": "BSD-3-Clause",
+    "local_changes": []
+  },
+  "SystemRescue": {
+    "version": "13.02-amd64",
+    "url": "https://fastly-cdn.system-rescue.org/releases/13.02/systemrescue-13.02-amd64.iso",
+    "sha256": "ad4d670b72859d887c7960142a9a9d36a3e50446694a035e254442f65d6e7572",
+    "vendored": false
+  }
+}

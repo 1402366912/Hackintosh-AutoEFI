@@ -1,0 +1,48 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2026 Hackintosh AutoEFI contributors
+set -u
+BOOT=/run/archiso/bootmnt
+APP="$BOOT/HardwareCollector"
+ID=3eead5ee-b941-4925-b314-5ac6d8a24ad1
+MARKER="$APP/identity-$ID"
+exec > >(tee -a /run/hardware-collector-start.log /dev/tty1) 2>&1
+printf '\nHardware Collector: starting automatic offline collection\n'
+if [[ ! -f "$MARKER" ]] || [[ "$(cat "$MARKER")" != "$ID" ]]; then
+    printf 'ERROR: collector USB identity marker does not match. No report destination selected.\n'
+    exit 1
+fi
+# Activate neither installed operating systems nor their filesystems.
+# nomdlvm/noswap are also set by the boot loader.
+udevadm settle --timeout=30 || true
+for module in snd_hda_intel i2c_hid_acpi hid_multitouch btusb iwlwifi; do
+    timeout 15 modprobe "$module" || true
+done
+udevadm settle --timeout=20 || true
+sleep 3
+if ! mount -o remount,rw "$BOOT"; then
+    printf 'ERROR: cannot make the collector USB writable.\n'
+    exit 1
+fi
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$(cat /proc/sys/kernel/random/uuid | cut -c1-8)"
+OUT="$BOOT/HardwareReports/$STAMP"
+mkdir -p "$BOOT/HardwareReports"
+printf 'Saving report to HardwareReports/%s\n' "$STAMP"
+if timeout 240 python3 "$APP/collect.py" --output "$OUT"; then
+    cp /run/hardware-collector-start.log "$OUT/startup.log" || true
+    sync
+    printf '\nReport saved. Collection status and missing fields are in Readiness.json.\n'
+    printf 'Shutting down in 15 seconds. The USB is safe to remove after power off.\n'
+    sleep 15
+    sync
+    mount -o remount,ro "$BOOT" || true
+    systemctl poweroff
+else
+    printf '\nCOLLECTION FAILED. Preserving diagnostic output; no EFI will be generated.\n'
+    mkdir -p "$OUT"
+    cp /run/hardware-collector-start.log "$OUT/startup-failed.log" || true
+    dmesg > "$OUT/dmesg-failed.txt" || true
+    sync
+    # Keep the failure visible and remain available on the local console.
+    exit 1
+fi
